@@ -35,6 +35,7 @@ class IP:
         # Retorne o next_hop para o dest_addr fornecido.
         dest_addr = str2addr(dest_addr)
         dest_addr, = struct.unpack('!I', dest_addr)
+        result = []
         for linha in self.tabela:
             cidr, next_hop = linha
             addr, n = cidr.split("/")
@@ -44,7 +45,13 @@ class IP:
             d_addr = dest_addr >> 32-int(n) << 32-int(n)
 
             if addr == d_addr:
-                return next_hop
+                result.append((int(n), next_hop))
+
+        if len(result) == 1:
+            return result[0][1]
+        elif len(result):
+            return sorted(result, reverse=True, key=lambda tup: tup[0])[0][1]
+
 
 
     def definir_endereco_host(self, meu_endereco):
