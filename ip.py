@@ -1,4 +1,5 @@
 from iputils import *
+import struct
 
 
 class IP:
@@ -31,7 +32,19 @@ class IP:
         # TODO: Use a tabela de encaminhamento para determinar o próximo salto
         # (next_hop) a partir do endereço de destino do datagrama (dest_addr).
         # Retorne o next_hop para o dest_addr fornecido.
-        pass
+        dest_addr = str2addr(dest_addr)
+        dest_addr, = struct.unpack('!I', dest_addr)
+        for linha in self.tabela:
+            cidr, next_hop = linha
+            addr, n = cidr.split("/")
+
+            addr = str2addr(addr)
+            addr, = struct.unpack('!I', addr)
+            d_addr = dest_addr >> 32-int(n) << 32-int(n)
+
+            if addr == d_addr:
+                return next_hop
+
 
     def definir_endereco_host(self, meu_endereco):
         """
@@ -51,7 +64,7 @@ class IP:
         """
         # TODO: Guarde a tabela de encaminhamento. Se julgar conveniente,
         # converta-a em uma estrutura de dados mais eficiente.
-        pass
+        self.tabela = tabela
 
     def registrar_recebedor(self, callback):
         """
