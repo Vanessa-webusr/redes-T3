@@ -14,6 +14,7 @@ class IP:
         self.enlace.registrar_recebedor(self.__raw_recv)
         self.ignore_checksum = self.enlace.ignore_checksum
         self.meu_endereco = None
+        self.counter = 0
 
     def __raw_recv(self, datagrama):
         dscp, ecn, identification, flags, frag_offset, ttl, proto, \
@@ -80,4 +81,41 @@ class IP:
         next_hop = self._next_hop(dest_addr)
         # TODO: Assumindo que a camada superior é o protocolo TCP, monte o
         # datagrama com o cabeçalho IP, contendo como payload o segmento.
-        self.enlace.enviar(datagrama, next_hop)
+
+        # version = 4
+        # ihl = 5
+        byte0 = struct.pack("!B", 0x45)
+
+        # dscp = ecn = 0
+        byte1 = struct.pack("!B", 0x00)
+
+        totalLength = 20 + len(segmento)
+        byte2and3 = struct.pack("!H", totalLength)
+
+        identification = self.counter
+        self.counter += 1
+        byte4and5 = struct.pack("!H", identification)
+
+        # flags = fragmentOffset = 0
+        byte6and7 = struct.pack("!H", 0x00)
+
+        timeToLive = 64
+        byte8 = struct.pack("!B", timeToLive)
+
+        # protocol = 6
+        byte9 = struct.pack("!B", 0x06)
+
+        # headerChecksum = 0
+        byte10and11 = struct.pack("!H", 0x0000)
+
+        sourceIpAddr, = struct.unpack('!I', str2addr(self.meu_endereco))
+        byte12to15 = struct.pack("!I", sourceIpAddr)
+
+        destIpAddr, = struct.unpack('!I', str2addr(dest_addr))
+        byte16to19 = struct.pack("!I", destIpAddr)
+
+        datagrama = byte0 + byte1 + byte2and3 + byte4and5 + byte6and7 + byte8 + byte9 + byte10and11 + byte12to15 + byte16to19
+        headerChecksum = calc_checksum(datagrama)
+        byte10and11 = struct.pack("!H", headerChecksum)
+        datagrama = byte0 + byte1 + byte2and3 + byte4and5 + byte6and7 + byte8 + byte9 + byte10and11 + byte12to15 + byte16to19
+        self.enlace.enviar(datagrama + segmento, next_hop)
