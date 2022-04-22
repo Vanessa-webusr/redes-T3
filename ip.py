@@ -47,10 +47,11 @@ class IP:
             if addr == d_addr:
                 result.append((int(n), next_hop))
 
-        if len(result) == 1:
-            return result[0][1]
-        elif len(result):
-            return sorted(result, reverse=True, key=lambda tup: tup[0])[0][1]
+        if len(result):
+            resultSorted = sorted(result, reverse=True, key=lambda tup: tup[0])
+            longer = resultSorted[0]
+            resultNextHop = longer[1]
+            return resultNextHop
 
 
 
