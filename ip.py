@@ -1,3 +1,4 @@
+# pylint: disable=all
 from iputils import *
 import struct
 
@@ -37,27 +38,19 @@ class IP:
             self.enlace.enviar(datagrama, next_hop)
 
     def createICMP(self, datagrama):
-        dscp, ecn, identification, flags, frag_offset, ttl, proto, \
-            src_addr, dst_addr, payload = read_ipv4_header(datagrama)
         # type = 11
         # code = 0
-        byte0and1 = struct.pack("!B", 0xb0)
+        byte0and1 = struct.pack("!BB", 0xb, 0x0)
         # checksum = 0
-        byte2and3 = struct.pack("!B", 0x00)
-        print('2and3', byte2and3)
+        byte2and3 = struct.pack("!H", 0)
         # unused = 0
-        byte4to7 = struct.pack("!H", 0x0000)
+        byte4to7 = struct.pack("!I", 0)
         rest = datagrama[:28]
-        print('rest', rest)
         byte8to11 = rest
         payloadICMP = byte0and1 + byte2and3 + byte4to7 + byte8to11
-        print('payload', payloadICMP)
         checksum = calc_checksum(payloadICMP)
-        print('checkum', checksum)
         byte2and3 = struct.pack("!H", checksum)
-        print('2and3', byte2and3)
         payloadICMP = byte0and1 + byte2and3 + byte4to7 + byte8to11
-        print('payload', (payloadICMP))
         return payloadICMP
 
     def change_ttl(self, datagrama, new_ttl):
@@ -193,7 +186,4 @@ class IP:
         headerChecksum = calc_checksum(datagrama)
         byte10and11 = struct.pack("!H", headerChecksum)
         datagrama = byte0 + byte1 + byte2and3 + byte4and5 + byte6and7 + byte8 + byte9 + byte10and11 + byte12to15 + byte16to19
-        print((segmento))
-        print(calc_checksum(segmento))
-        print(0xffff)
         self.enlace.enviar(datagrama + segmento, next_hop)
