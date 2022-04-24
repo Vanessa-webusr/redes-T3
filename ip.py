@@ -19,6 +19,12 @@ class IP:
     def __raw_recv(self, datagrama):
         dscp, ecn, identification, flags, frag_offset, ttl, proto, \
            src_addr, dst_addr, payload = read_ipv4_header(datagrama)
+
+        ttl_ = ttl - 1
+        if ttl_ == 0:
+            return
+        datagrama = self.change_ttl(datagrama, ttl_)
+
         if dst_addr == self.meu_endereco:
             # atua como host
             if proto == IPPROTO_TCP and self.callback:
@@ -28,6 +34,42 @@ class IP:
             next_hop = self._next_hop(dst_addr)
             # TODO: Trate corretamente o campo TTL do datagrama
             self.enlace.enviar(datagrama, next_hop)
+
+    def change_ttl(self, datagrama, new_ttl):
+        dscp, ecn, identification, flags, frag_offset, ttl, proto, \
+           src_addr, dst_addr, payload = read_ipv4_header(datagrama)
+
+        # version = 4
+        # ihl = 5
+        byte0 = struct.pack("!B", 0x45)
+
+        byte1 = struct.pack("!B", dscp & ecn)
+
+        totalLength = len(payload)
+        byte2and3 = struct.pack("!H", totalLength)
+
+        byte4and5 = struct.pack("!H", identification)
+
+        byte6and7 = struct.pack("!H", flags & frag_offset)
+
+        byte8 = struct.pack("!B", new_ttl)
+
+        byte9 = struct.pack("!B", proto)
+
+        # headerChecksum = 0
+        byte10and11 = struct.pack("!H", 0x0000)
+
+        sourceIpAddr, = struct.unpack('!I', str2addr(src_addr))
+        byte12to15 = struct.pack("!I", sourceIpAddr)
+
+        destIpAddr, = struct.unpack('!I', str2addr(dst_addr))
+        byte16to19 = struct.pack("!I", destIpAddr)
+
+        datagrama = byte0 + byte1 + byte2and3 + byte4and5 + byte6and7 + byte8 + byte9 + byte10and11 + byte12to15 + byte16to19
+        headerChecksum = calc_checksum(datagrama)
+        byte10and11 = struct.pack("!H", headerChecksum)
+        datagrama = byte0 + byte1 + byte2and3 + byte4and5 + byte6and7 + byte8 + byte9 + byte10and11 + byte12to15 + byte16to19
+        return datagrama
 
     def _next_hop(self, dest_addr):
         # TODO: Use a tabela de encaminhamento para determinar o próximo salto
